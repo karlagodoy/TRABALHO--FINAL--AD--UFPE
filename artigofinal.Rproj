@@ -1,13 +1,60 @@
-Version: 1.0
+require(foreign)
+require(nnet)
+require(ggplot2)
+require(reshape2)
+require(effects)
+require(tidyverse)
+require(coefplot)
+require(readxl)
 
-RestoreWorkspace: Default
-SaveWorkspace: Default
-AlwaysSaveHistory: Default
+## Agrupando dados para formar base de dados 
 
-EnableCodeIndexing: Yes
-UseSpacesForTab: Yes
-NumSpacesForTab: 2
-Encoding: UTF-8
+# Variavel Dependente IDH
 
-RnwWeave: Sweave
-LaTeX: pdfLaTeX
+setwd("C:/Users/karla/Desktop/Artigo desenvolvimento sustentavel")
+
+Data_IDH <- read_excel("IDH_2017.xlsx", sheet = 1)
+
+# Variavel Sustentabilidade
+
+setwd("C:/Users/karla/Desktop/Artigo desenvolvimento sustentavel")
+
+Data_QOG <- read.csv("qog_std_cs_jan18.CSV")
+
+Data_Sust <- Data_QOG %>% group_by(ccode) %>% summarise(bti_su)
+
+## Democracia
+
+setwd("C:/Users/karla/Desktop/Artigo desenvolvimento sustentavel")
+
+Data_P4 <- read_excel("p4v2017.xlsx", sheet = 1)
+
+Data_2017 <- Data_P4 %>% filter(year == 2017)
+
+Data_Demo2017 <- Data_2017 %>%  group_by(country) %>% summarise(polity)
+
+# Capacidade de Governo 
+
+setwd("C:/Users/karla/Desktop/Artigo desenvolvimento sustentavel")
+
+Data_QOG1 <- read.csv("qog_std_cs_jan18.CSV")
+
+Data_Cap <- Data_QOG1 %>% group_by(ccode) %>% summarise(sgi_goec)
+
+# Unindo IDH, Sustentabilidade, Democracia e Capacidade de Governo 
+
+IDH_Sust <- Data_IDH %>% full_join(Data_Sust, by = c("ccode"))
+
+IDH_Sust_Demo <- IDH_Sust %>% full_join(Data_Demo2017, by = c("country"))
+
+IDH_Sust_Demo_Cap <- IDH_Sust_Demo %>% full_join(Data_Sust, by = c("ccode"))
+
+
+save(IDH_Sust_Demo_Cap, file = "karla-godoy-ad-ufpe-2019.RData")
+write.csv2(IDH_Sust_Demo_Cap, file = "karla-godoy-ad-ufpe-2019.csv",
+           row.names = F)
+
+## Análise discritiva dos dados 
+
+
+
