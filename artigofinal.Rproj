@@ -27,28 +27,37 @@ Data_Sust <- Data_QOG %>% group_by(ccode) %>% summarise(bti_su)
 
 setwd("C:/Users/karla/Desktop/Artigo desenvolvimento sustentavel")
 
-Data_P4 <- read_excel("p4v2017.xlsx", sheet = 1)
+Data_QOG1 <- read.csv("qog_std_cs_jan18.CSV")
 
-Data_2017 <- Data_P4 %>% filter(year == 2017)
-
-Data_Demo2017 <- Data_2017 %>%  group_by(country) %>% summarise(polity)
+Data_Demo <- Data_QOG1 %>% group_by(ccode) %>% summarise(sgi_qd)
 
 # Capacidade de Governo 
 
 setwd("C:/Users/karla/Desktop/Artigo desenvolvimento sustentavel")
 
-Data_QOG1 <- read.csv("qog_std_cs_jan18.CSV")
+Data_QOG2 <- read.csv("qog_std_cs_jan18.CSV")
 
-Data_Cap <- Data_QOG1 %>% group_by(ccode) %>% summarise(sgi_goec)
+Data_Cap <- Data_QOG2 %>% group_by(ccode) %>% summarise(sgi_goec)
 
 # Unindo IDH, Sustentabilidade, Democracia e Capacidade de Governo 
 
 IDH_Sust <- Data_IDH %>% full_join(Data_Sust, by = c("ccode"))
 
-IDH_Sust_Demo <- IDH_Sust %>% full_join(Data_Demo2017, by = c("country"))
+IDH_Sust_Demo <- IDH_Sust %>% full_join(Data_Demo, by = c("ccode"))
 
-IDH_Sust_Demo_Cap <- IDH_Sust_Demo %>% full_join(Data_Sust, by = c("ccode"))
+IDH_Sust_Demo_Cap <- IDH_Sust_Demo %>% full_join(Data_Cap, by = c("ccode"))
 
+# Mudando o nome das variáveis 
+
+names(IDH_Sust_Demo_Cap)[grep('bti_su', names(IDH_Sust_Demo_Cap))] <- 'Sustainability'
+
+names(IDH_Sust_Demo_Cap)[grep('sgi_qd', names(IDH_Sust_Demo_Cap))] <- 'Quality_of_Democracy'
+
+names(IDH_Sust_Demo_Cap)[grep('sgi_goec', names(IDH_Sust_Demo_Cap))] <- 'Capacity_of_government'
+
+## Salvando base de dados 
+
+setwd("C:/Users/karla/Desktop/Artigo desenvolvimento sustentavel")
 
 save(IDH_Sust_Demo_Cap, file = "karla-godoy-ad-ufpe-2019.RData")
 write.csv2(IDH_Sust_Demo_Cap, file = "karla-godoy-ad-ufpe-2019.csv",
@@ -56,5 +65,176 @@ write.csv2(IDH_Sust_Demo_Cap, file = "karla-godoy-ad-ufpe-2019.csv",
 
 ## Análise discritiva dos dados 
 
+
+summary(IDH_Sust_Demo_Cap)
+
+str(IDH_Sust_Demo_Cap)
+
+## Transformando a variavel IDH de caracters para Numerico
+
+IDH_Sust_Demo_Cap$IDH  <- as.numeric(gsub("\\.", "", IDH_Sust_Demo_Cap$IDH ))
+
+
+summary(IDH_Sust_Demo_Cap)
+
+
+## Analisando a distribuição das variaveis 
+
+plot(IDH_Sust_Demo_Cap$Sustainability)
+
+plot(IDH_Sust_Demo_Cap$IDH)
+
+plot (IDH_Sust_Demo_Cap$Quality_of_Democracy)
+
+plot (IDH_Sust_Demo_Cap$Capacity_of_government)
+
+# Realizando Regressao Bivariada- IDH como variavel dependente e Sustentabilidade como variavel independente
+
+modelo1 <- lm(IDH ~ Sustainability, data = IDH_Sust_Demo_Cap)
+
+summary(modelo1)
+
+confint(modelo1)
+
+plot(x=fitted(modelo1), y=residuals(modelo1),
+     panel.last = abline(h=0, lty=2))
+
+plot(modelo1)
+
+# transformação logaritmica 
+
+logidh <- log(IDH_Sust_Demo_Cap$IDH)
+
+hist(logidh)
+
+plot(logidh)
+
+hist(IDH_Sust_Demo_Cap$IDH )
+plot (IDH_Sust_Demo_Cap$IDH)
+
+# Regressão com log
+
+modelo2 <- lm(logidh ~ Sustainability, data = IDH_Sust_Demo_Cap)
+
+summary(modelo2)
+
+# Realizando regressão multivariada- IDH como variavel dependente e Sustentabilidade e Qualidade da 
+# democracia como variaveis independentes
+
+
+regressao2 <- lm(IDH ~ Sustainability+ Quality_of_Democracy, data = IDH_Sust_Demo_Cap)
+
+summary(regressao2)
+
+
+# Realizando regressão multivariada- IDH como variavel dependente e Sustentabilidade e Qualidade da 
+# democracia e capacidade de governo como variaveis independentes
+
+regressao3 <- lm(IDH ~ Sustainability+ Quality_of_Democracy+ Capacity_of_government , data = IDH_Sust_Demo_Cap)
+
+summary(regressao3)
+
+coef(regressao3)
+
+## realizando regressão com sustentabilidade como variavel dependente  e Quality of government como independente
+
+Model.1 <- lm (Sustainability ~ Quality_of_Democracy data= IDH_Sust_Demo_Cap)
+summary(Model.1)
+
+#Call:
+ # lm(formula = Sustainability ~ Quality_of_Democracy, data = IDH_Sust_Demo_Cap)
+
+#Residuals:
+#  Min      1Q  Median      3Q     Max 
+#-2.0187 -0.6319  0.3816  0.5248  1.5504 
+
+#Coefficients:
+# Estimate Std. Error t value Pr(>|t|)   
+#(Intercept)            3.7312     1.1729   3.181  0.00722 **
+#  Quality_of_Democracy   0.5717     0.1757   3.255  0.00627 **
+#  ---
+#  Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+#Residual standard error: 0.9374 on 13 degrees of freedom
+#(182 observations deleted due to missingness)
+#Multiple R-squared:  0.449,	Adjusted R-squared:  0.4066 
+#F-statistic: 10.59 on 1 and 13 DF,  p-value: 0.006268
+
+
+## Regressão com Sustainability como variavel dependente e capacity of government como independente 
+
+Model.2 <- lm (Sustainability ~ Capacity_of_government, data= IDH_Sust_Demo_Cap)
+summary(Model.2)
+
+
+# Call:
+# lm(formula = Sustainability ~ Capacity_of_government, data = IDH_Sust_Demo_Cap)
+
+# Residuals:
+#  Min      1Q  Median      3Q     Max 
+# -2.6119 -0.4985 -0.1698  1.0189  1.4399 
+
+# Coefficients:
+#  Estimate Std. Error t value Pr(>|t|)   
+# (Intercept)              6.2823     1.8576   3.382  0.00491 **
+#  Capacity_of_government   0.2027     0.3131   0.647  0.52872   
+# ---
+#  Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+# Residual standard error: 1.243 on 13 degrees of freedom
+# (182 observations deleted due to missingness)
+# Multiple R-squared:  0.03122,	Adjusted R-squared:  -0.0433 
+# F-statistic: 0.419 on 1 and 13 DF,  p-value: 0.5287
+
+## Regressão com Sustainability como dependente e capacity e Quality como independente
+
+Model.3 <- lm (Sustainability ~ Quality_of_Democracy+Capacity_of_government, data= IDH_Sust_Demo_Cap)
+summary(Model.3)
+
+# Call:
+#  lm(formula = Sustainability ~ Quality_of_Democracy + Capacity_of_government, 
+#     data = IDH_Sust_Demo_Cap)
+
+# Residuals:
+#  Min      1Q  Median      3Q     Max 
+# -1.8159 -0.6499  0.1607  0.4206  1.7568 
+
+# Coefficients:
+#  Estimate Std. Error t value Pr(>|t|)   
+# (Intercept)              4.4585     1.5363   2.902  0.01327 * 
+#  Quality_of_Democracy     0.6434     0.2025   3.177  0.00797 **
+#  Capacity_of_government  -0.2046     0.2723  -0.751  0.46687   
+---
+#  Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+# Residual standard error: 0.9535 on 12 degrees of freedom
+# (182 observations deleted due to missingness)
+# Multiple R-squared:  0.4738,	Adjusted R-squared:  0.3861 
+# F-statistic: 5.402 on 2 and 12 DF,  p-value: 0.02123
+
+    
+# Regressão com log de IDH como independente   
+
+Model.4 <- lm (Sustainability ~ logidh, data= IDH_Sust_Demo_Cap)
+summary(Model.4)
+
+# Call:
+#  lm(formula = Sustainability ~ logidh, data = IDH_Sust_Demo_Cap)
+
+# Residuals:
+#  Min      1Q  Median      3Q     Max 
+# -3.4192 -1.4222  0.0711  1.0714  4.5135 
+
+# Coefficients:
+#  Estimate Std. Error t value Pr(>|t|)    
+#(Intercept)  4.39324    0.37394  11.748   <2e-16 ***
+#  logidh       0.01377    0.01100   1.252    0.213    
+---
+#  Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+#Residual standard error: 1.741 on 122 degrees of freedom
+#(73 observations deleted due to missingness)
+#Multiple R-squared:  0.01269,	Adjusted R-squared:  0.004595 
+#F-statistic: 1.568 on 1 and 122 DF,  p-value: 0.2129
 
 
