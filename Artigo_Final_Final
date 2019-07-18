@@ -1,0 +1,392 @@
+require(foreign)
+require(nnet)
+require(ggplot2)
+require(reshape2)
+require(effects)
+require(tidyverse)
+require(coefplot)
+require(readxl)
+require(dplyr)
+install.packages("texreg")
+require(texreg)
+install.packages("olsrr")
+require(olsrr)
+require (fields)
+require(lmtest)
+require(stats)
+install.packages("WriteXLS")
+require(WriteXLS)
+require(stargazer) 
+require(interplot)
+
+options(scipen= 999, digits= 5)
+
+## Agrupando dados para formar base de dados 
+
+# Variavel Sustentabilidade
+
+setwd("C:/Users/karla/Desktop/Artigo desenvolvimento sustentavel")
+
+Data_ENVIRONMENTAL <- read_excel("ENVIRONMENTAL_PERFORMANCE_2018.xlsx", sheet = 1)
+
+summary(Data_ENVIRONMENTAL)
+
+Score_Numeric <- as.numeric(as.character(Data_ENVIRONMENTAL$SCORE))
+
+DataEnvi<- add_column(Data_ENVIRONMENTAL, Score_Numeric)
+
+summary(DataEnvi)
+
+str(DataEnvi)
+
+
+# GPD
+
+setwd("C:/Users/karla/Desktop/Artigo desenvolvimento sustentavel")
+
+Data_GDP<- read_excel("GDP_Percapita_2018.xlsx", sheet = 1)
+
+Data_GDP_2018 <- na.omit (Data_GDP)
+
+Data_GDP_Percapita <- Data_GDP_2018 %>% group_by(`Code`) %>% summarise(`2018 [YR2018]`)
+
+GDP_Numeric<- as.numeric(as.character(Data_GDP_Percapita$`2018 [YR2018]`))
+
+summary(GDP_Numeric)
+
+DataGDP <- add_column(Data_GDP_Percapita, GDP_Numeric)
+
+str(DataGDP)
+
+summary(DataGDP)
+
+# Adicionando a variavel IDH
+
+setwd("C:/Users/karla/Desktop/Artigo desenvolvimento sustentavel")
+
+Data_IDH<- read_excel("IDH_2017.xlsx", sheet = 1)
+
+summary(Data_IDH)
+
+IDH_Numeric<- as.numeric(as.character(Data_IDH$IDH))
+
+summary(IDH_Numeric)
+
+DataIDH <- add_column(Data_IDH, IDH_Numeric)
+
+str(DataIDH)
+
+DataIDH$IDH <- NULL
+
+## Democracia
+
+setwd("C:/Users/karla/Desktop/Artigo desenvolvimento sustentavel")
+
+Data_DEMOCRACY <- read_excel("Democracy_Index_2018.xlsx", sheet = 1)
+
+Data_DEMOCRACY_2018 <- Data_DEMOCRACY %>% group_by(Code) %>% summarise(`Overall score`)
+
+summary(Data_DEMOCRACY_2018)
+
+Overall_Numeric<- as.numeric(as.character(Data_DEMOCRACY_2018$`Overall score`))
+
+DataDemoc <- add_column(Data_DEMOCRACY_2018, Overall_Numeric )
+
+summary(DataDemoc)
+
+str(DataDemoc)
+
+
+# Capacidade de Governo 
+
+setwd("C:/Users/karla/Desktop/Artigo desenvolvimento sustentavel")
+
+Data_Gov_Eff<- read.delim("Gov_Effect.txt", header = TRUE, sep = "\t", dec = ".")
+
+summary(Data_Gov_Eff)
+
+Estimate_Numeric<- as.numeric(as.character(Data_Gov_Eff$`Estimate`))
+
+summary(Estimate_Numeric)
+
+DataGovEffet <- add_column(Data_Gov_Eff, Estimate_Numeric)
+
+str(DataGovEffet)
+
+summary(DataGovEffet)
+
+
+
+# Unindo Sustentabilidade, IDH, GDP 
+
+Env_GDP <- DataEnvi %>% full_join (DataGDP, by = c("Code"))
+
+Env_GDP_IDH <- Env_GDP %>% full_join(DataIDH, by = c("Code"))
+
+Env_GDP_IDH_Democ<- Env_GDP_IDH %>% full_join(DataDemoc, by = c("Code"))
+  
+Env_GDP_IDH_Democ_Cap <- Env_GDP_IDH_Democ %>% full_join(DataGovEffet, by = c("Code"))
+
+#Excluindo todos os casos que tem NA
+
+Env_GDP_IDH_Democ_Cap.1<- na.omit(Env_GDP_IDH_Democ_Cap)
+
+summary(Env_GDP_IDH_Democ_Cap.1)
+
+# Excluindo colunas em Caracteres
+
+summary(Env_GDP_IDH_Democ_Cap.1)
+
+Env_GDP_IDH_Democ_Cap.1$"Overall score" <- NULL 
+
+Env_GDP_IDH_Democ_Cap.1$SCORE<- NULL
+
+Env_GDP_IDH_Democ_Cap.1$`2018 [YR2018]` <- NULL
+
+Env_GDP_IDH_Democ_Cap.1$country<- NULL
+
+Env_GDP_IDH_Democ_Cap.1$country<- NULL
+
+
+Env_GDP_IDH_Democ_Cap.1$Estimate<- NULL
+
+summary(Env_GDP_IDH_Democ_Cap.1)
+
+
+# Mudando o nome das variÃ¡veis 
+
+
+names(Env_GDP_IDH_Democ_Cap.1)[grep('Score_Numeric', names(Env_GDP_IDH_Democ_Cap.1))] <- 'EnvironPerfor'
+
+names(Env_GDP_IDH_Democ_Cap.1)[grep('IDH_Numeric', names(Env_GDP_IDH_Democ_Cap.1))] <- 'IDH'
+
+names(Env_GDP_IDH_Democ_Cap.1)[grep('GDP_Numeric', names(Env_GDP_IDH_Democ_Cap.1))] <- 'GDP'
+
+names(Env_GDP_IDH_Democ_Cap.1)[grep('Estimate_Numeric', names(Env_GDP_IDH_Democ_Cap.1))] <- 'GovEffect'
+
+names(Env_GDP_IDH_Democ_Cap.1)[grep('Overall_Numeric', names(Env_GDP_IDH_Democ_Cap.1))] <- 'Democ'
+
+
+names (Env_GDP_IDH_Democ_Cap.1)
+
+# Formando base para Analise Fatorial 
+
+Env_GDP_IDH.2 <- as.data.frame(Env_GDP_IDH_Democ_Cap.1)
+
+summary(Env_GDP_IDH.2)
+
+Env_GDP_IDH.2$Code <- NULL 
+
+Env_GDP_IDH.2$COUNTRY <- NULL 
+
+Env_GDP_IDH.2$REG <- NULL 
+
+Env_GDP_IDH.2$Democ <- NULL 
+Env_GDP_IDH.2$GovEffect <- NULL 
+
+names(Env_GDP_IDH.2)
+
+# Rodando Análise Fatorial
+
+# Analisando correlação entre as variaveis do fator 
+
+# Segundo a teoria, para criação de um fator partindo de outras  variaveis é importante que essas variaveis estejam correlacionadas entre sim. 
+
+# Matriz de correlação
+
+MatrizCor <- round(cor(Env_GDP_IDH.2),2)
+head(MatrizCor)
+
+# Mapa de Calor da Correlação
+
+library(reshape2)
+melted_MatrizCor<- melt(MatrizCor)
+head(melted_MatrizCor)
+
+ggplot(data =melted_MatrizCor , aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile()
+
+# Grafico de Dispersão para observar variavel GDP e EnvironPerfor
+
+ggplot(data = Env_GDP_IDH.2, mapping = aes(GDP,EnvironPerfor)) + 
+  geom_point()
+
+
+# Rodando o PCA pra determinar o numero de fatores 
+
+Env_GDP_IDH.2.PCA <- princomp(Env_GDP_IDH.2)
+
+summary(Env_GDP_IDH.2.PCA)
+
+plot (Env_GDP_IDH.2.PCA)
+
+
+# Baseado no PCA, tenho que utilizar 1 fator.
+
+Env_GDP_IDH.2.AF <- factanal(Env_GDP_IDH.2, factors = 1, rotation = "varimax")
+
+Env_GDP_IDH.2.AF
+
+Env_GDP_IDH.AF <- factanal(Env_GDP_IDH.2, factors = 1, rotation = "varimax", scores = "regression")
+
+Env_GDP_IDH.AF
+
+# Fator Gerado
+
+head(Env_GDP_IDH.AF$scores)
+
+# Base de dados final
+
+DesenSust <- add_column(Env_GDP_IDH.AF$scores)
+
+# Salvando base de dados completa
+
+ArtK <- merge(Env_GDP_IDH_Democ_Cap.1, DesenSust, by= 0)
+
+save(ArtK, file = "karla-godoy-ad-ufpe-2019.RData")
+write.csv2(ArtK, file = "karla-godoy-ad-ufpe-2019.csv",
+           row.names = F)
+
+# Análise Descritiva dos dados
+summary (ArtK)
+
+str(ArtK)
+
+# observando a distribuicao das variaveis:
+
+ggplot(ArtK, aes(Democ))+geom_density()
+
+ggplot(ArtK, aes(GovEffect))+geom_density()
+
+ggplot(ArtK, aes (Factor1))+geom_density()
+
+# Analisando  a dispersao conjunta das variaveis
+
+ggplot(data = ArtK, mapping = aes(Democ, Factor1)) + 
+  geom_point()
+
+ggplot(data = ArtK, mapping = aes(GovEffect, Factor1)) + 
+  geom_point()
+
+# Observamos que existe uma dispersao normal das variaveis independentes e variavel dependente.
+
+# calculando a correlacao entre elas
+
+cor.test(ArtK$Democ,ArtK$Factor1)
+
+cor.test(ArtK$GovEffect, ArtK$Factor1)
+
+cor.test(ArtK$Democ, ArtK$GovEffect)
+
+# Podemos observar que as variaveis independentes também estão altamente correlacionadas.
+# Isso indica Multicolinearidade. Por isso será apresentado um modelo de regressão multivariada sem interação das duas 
+#variaveis independentes e outro modelo com interatividade entre Democracia e Capacidade de Governo.
+
+## Regressão Multivariada sem interação
+
+Modelo1 <- lm(Factor1 ~ Democ + GovEffect, data= ArtK)
+
+summary(Modelo1)
+
+confint(Modelo1)
+
+screenreg(list(Modelo1))
+
+# =======================
+# Model 1   
+# -----------------------
+#  (Intercept)   -0.16    
+# (0.17)   
+# Democ          0.03    
+# (0.03)   
+# GovEffect      0.76 ***
+#  (0.06)   
+-----------------------
+#  R^2            0.71    
+# Adj. R^2       0.71    
+# Num. obs.    139       
+# RMSE           0.52    
+# =======================
+#  *** p < 0.001, ** p < 0.01, * p < 0.05
+
+
+
+## observando o distribuicao de normalidade, erros e residuos: 
+
+ols_plot_resid_qq(Modelo1)
+ols_plot_resid_fit(Modelo1)
+
+# Podemos verificar a homecedasticidade dos residuos também a partir do teste de Breush_Pagan. 
+
+bptest(Modelo1)
+
+# studentized Breusch-Pagan test
+
+# data:  Modelo1
+# BP = 14.4, df = 2, p-value = 0.00076
+
+# Dado o p-valor (0.00076), podemos dizer que a probabilidade de cometer um erro de 
+# tipo I (afirmar que a hipotese nula e falsa, dado que ela e verdadeira) é baixa. 
+# Logo, concluimos que ha homocedasticidade nos residuos.
+
+
+## Comparando Coeficientes
+
+summary(Modelo1)
+
+# padronizando coeficiente Democracy
+
+coef(Modelo1)[2]* (sd(ArtK$Democ)/ sd(ArtK$Factor1)) 
+
+#  Democ 
+# 0.074245 
+
+# padronizando coef Governement Effect
+coef(Modelo1)[3]* (sd(ArtK$GovEffect)/ sd(ArtK$Factor1))
+
+# GovEffect 
+# 0.79031
+
+# Padronizando os coeficientes e possivel constatar que a variavel de Capacidade de Governo 
+# aresenta maior efeito/associacao sobre a variavel dependente Desenvolvimento Sustentável.
+
+## Regressão Multivariada com Interação entre os termos independentes
+
+
+Modelo2 <- lm(Factor1 ~ Democ + GovEffect+ Democ*GovEffect, data= ArtK)
+
+summary(Modelo2)
+
+
+#Vizualizando os dois modelos
+
+stargazer(Modelo1, Modelo2, type="text", 
+          column.labels = c("Sem interação", "Com interação"), 
+          intercept.bottom = FALSE, 
+          single.row=FALSE,     
+          notes.append = FALSE, 
+          header=FALSE) 
+
+
+
+# Efeito Marginal de Democracia quando isolado o efeito de Capacidade de Governar
+
+me.democ <- c (0.0304, 0.0409 + (0.0304))
+
+# Efeito Marginal de Capacidade de Governar quando isolado o efeito da Democracia
+
+me.capac <- c (0.5216, 0.0409 + (0.5216))
+
+
+# Criando data frame com os Efeitos Marginais de renda e dos erros padrões
+tabelaInter <- data.frame(me.democ, me.capac)
+
+head(tabelaInter)
+
+#  me.democ me.capac
+# 1   0.0304   0.5216
+# 2   0.0713   0.5625
+
+
+# Interpretação
+# 
