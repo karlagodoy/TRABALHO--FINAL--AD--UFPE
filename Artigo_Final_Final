@@ -18,6 +18,7 @@ install.packages("WriteXLS")
 require(WriteXLS)
 require(stargazer) 
 require(interplot)
+require(car)
 
 options(scipen= 999, digits= 5)
 
@@ -243,9 +244,16 @@ DesenSust <- add_column(Env_GDP_IDH.AF$scores)
 
 ArtK <- merge(Env_GDP_IDH_Democ_Cap.1, DesenSust, by= 0)
 
-save(ArtK, file = "karla-godoy-ad-ufpe-2019.RData")
-write.csv2(ArtK, file = "karla-godoy-ad-ufpe-2019.csv",
+write.csv(ArtK, "C:/Users/karla/Desktop/Artigo desenvolvimento sustentavel/karla-godoy-ad-ufpe-2019.csv",
            row.names = F)
+
+
+# Abrindo dados
+
+setwd("C:/Users/karla/Desktop/Artigo desenvolvimento sustentavel")
+
+ArtK <- read.csv (file="karla-godoy-ad-ufpe-2019.csv", header=TRUE, sep=",")
+
 
 # Análise Descritiva dos dados
 summary (ArtK)
@@ -276,19 +284,35 @@ cor.test(ArtK$Democ,ArtK$Factor1)
 
 cor.test(ArtK$GovEffect, ArtK$Factor1)
 
-cor.test(ArtK$Democ, ArtK$GovEffect)
 
-# Podemos observar que as variaveis independentes também estão altamente correlacionadas.
-# Isso indica Multicolinearidade. Por isso será apresentado um modelo de regressão multivariada sem interação das duas 
-#variaveis independentes e outro modelo com interatividade entre Democracia e Capacidade de Governo.
+## Regessão linear bivariada com a variável dependente Factor e vi Democracia
 
-## Regressão Multivariada sem interação
+Modelo <- lm(Factor1 ~ Democ, data= ArtK)
+
+screenreg(list(Modelo))
+
+# =======================
+#  Model 1   
+# -----------------------
+#  (Intercept)   -1.60 ***
+#  (0.18)   
+# Democ          0.29 ***
+#  (0.03)   
+# -----------------------
+#  R^2            0.41    
+# Adj. R^2       0.41    
+# Num. obs.    139       
+# RMSE           0.75    
+# =======================
+#  *** p < 0.001, ** p < 0.01, * p < 0.05
+
+# Podemos observar que o Modelo apresenta um poder de explicação (r^2) de 0.41 da variável dependente. 
+
+
+## Regressão Multivariada 
 
 Modelo1 <- lm(Factor1 ~ Democ + GovEffect, data= ArtK)
 
-summary(Modelo1)
-
-confint(Modelo1)
 
 screenreg(list(Modelo1))
 
@@ -309,12 +333,70 @@ screenreg(list(Modelo1))
 # =======================
 #  *** p < 0.001, ** p < 0.01, * p < 0.05
 
+# O Modelo 1 apresenta que com aumento de 1 unidade da variavel Democracia, existe 
+# um aumento de 0,03% na variavel dependente. Ja para a variavel GovEffect,podemos observar que 
+# o aumento de uma unidade da variavel independente ocorre um aumento de 0.76 na variavel depentente. 
+# Enquanto que o poder explicativo do modelo (r^2) é de 0.71 e o RMSE é de 0.52. Contudo, para melhor 
+# entermos o melhor parametro para entendimento é o padronização dos coeficientes. 
+
+# Coef
+
+coef(Modelo1)
+
+# (Intercept)       Democ   GovEffect 
+# 0.159768   -0.033419   -0.764481
+
+# Para os coefientes estimados de angulação da reta o modelo retorna os valores de 0.159768 para quando X1 e X2 forem 0
+# Já para X1 o valor é -0.033419 quando GovEffect é zero. Já para X2, o valor apresentado foi de -0.764481 para quando Democ for 0.
 
 
-## observando o distribuicao de normalidade, erros e residuos: 
+# Confint 
 
+confint(Modelo1)
+
+#   2.5 %    97.5 %
+# (Intercept)  0.498753 -0.179216
+# Democ        0.025112 -0.091949
+# GovEffect   -0.638698 -0.890264
+
+# # Temos 95% de "chance" dos intervalos apresentados conterem o verdadeiro valor da média populacional.
+
+
+# VIF
+
+# Atraves do Vif e possivel identificar problemas de multicolinearidade com as variáveis independentes.
+
+vif(Modelo1)
+
+#  Democ GovEffect 
+# 2.0578    2.0578 
+
+# Os VIFs medem o quanto a variância de um coeficiente de regressão estimado aumenta se seus preditores estão correlacionados. 
+# Se todos os VIFs forem 1, não há multicolinearidade, mas se alguns VIFs forem maiores do que 1, os preditores estão correlacionados. 
+# Contudo, apenas quando um VIF é 5 > 10 é que o coeficiente de regressão para esse termo não é estimado de maneira apropriada. 
+# Dessa forma, podemos crer que o coeficiente de regressao do modelo é estimado de maneira apropriada, apesar de apresentar Vif de 2.058.
+
+
+## Observando o distribuicao de normalidade, erros e residuos: 
+
+# Gráfico de valores ajustados pelos resíduos
 ols_plot_resid_qq(Modelo1)
+
 ols_plot_resid_fit(Modelo1)
+
+# Teste de Shapiro para normalidade  
+
+shapiro.test(Modelo1$residuals)
+
+# Shapiro-Wilk normality test
+
+# data:  Modelo1$residuals
+# W = 0.987, p-value = 0.2
+
+#O Teste de Shapiro-Wilk para normalidade avalia a aderencia dos residuos a distribuicao Normal. 
+# O p-valor se refere a hipotese de que os residuos seguem de fato uma distribuicao Normal,
+# e essa hipotese e rejeitada, de modo geral, quando p valor e menor que 0.05. Neste caso, podemos afirmar
+# que os residuos tem distribuicao normal pois o p valor e maior que 0.05.
 
 # Podemos verificar a homecedasticidade dos residuos também a partir do teste de Breush_Pagan. 
 
@@ -348,45 +430,20 @@ coef(Modelo1)[3]* (sd(ArtK$GovEffect)/ sd(ArtK$Factor1))
 # 0.79031
 
 # Padronizando os coeficientes e possivel constatar que a variavel de Capacidade de Governo 
-# aresenta maior efeito/associacao sobre a variavel dependente Desenvolvimento Sustentável.
-
-## Regressão Multivariada com Interação entre os termos independentes
+# apresenta maior efeito/associacao sobre a variavel dependente Desenvolvimento Sustentável.
 
 
-Modelo2 <- lm(Factor1 ~ Democ + GovEffect+ Democ*GovEffect, data= ArtK)
+## Conclusões 
 
-summary(Modelo2)
+# Ao analisarmos a relação da variavel dependente Fator1, que corresponde ao fator criado para avaliar o 
+# desenvolvimento sustentável em 139 países, com as variáveis independentes Democ (Democracia) e GovEffect (Efetividade do Governo) podemos 
+# observar os seguintes pontos:
 
-
-#Vizualizando os dois modelos
-
-stargazer(Modelo1, Modelo2, type="text", 
-          column.labels = c("Sem interação", "Com interação"), 
-          intercept.bottom = FALSE, 
-          single.row=FALSE,     
-          notes.append = FALSE, 
-          header=FALSE) 
-
+# Quando a analisada de forma individual, as variais independentes tem uma correlação forte e positiva com a variavel dependente.
+# A regressão bivariada entre Democ e Factor1 apresenta um p-valor significativo e a variavel democracia explica 0.4% da variação na variavel dependente. 
+# Contudo, quando analisado o modelo de regressão multivariada com as variaveis independentes Democracia e Efetividade do Governo, a VI Democracia apresenta um teor explicativo de apenas
+# 0.07%, enquanto que a VI Efetividade de Governo explica 0.79% da variação  da variavel dependente, de acordo com a padronização dos coeficientes. 
+# Já com relação aos pressupostos e ajustes do modelo, os rsiduos estão dispersos de maneira aleatoria. Existem evisdencias de que os residuos seguem uma distribuicao Normal,
+# e dessa forma, existe homocedasticidade nos residuos.
 
 
-# Efeito Marginal de Democracia quando isolado o efeito de Capacidade de Governar
-
-me.democ <- c (0.0304, 0.0409 + (0.0304))
-
-# Efeito Marginal de Capacidade de Governar quando isolado o efeito da Democracia
-
-me.capac <- c (0.5216, 0.0409 + (0.5216))
-
-
-# Criando data frame com os Efeitos Marginais de renda e dos erros padrões
-tabelaInter <- data.frame(me.democ, me.capac)
-
-head(tabelaInter)
-
-#  me.democ me.capac
-# 1   0.0304   0.5216
-# 2   0.0713   0.5625
-
-
-# Interpretação
-# 
